@@ -4,21 +4,25 @@
 	 Created on:   	2/24/2020 1:11 PM
 	 Created by:   	Omerf
 	 Organization: 	Israel Cyber Directorate
-	 Filename:     	Cybergo.ps1
+	 Filename:     	go.ps1
 	===========================================================================
 	.DESCRIPTION
 		Cyber Audit Tool - Cyber Audit tool launch from www Script
 #>
 
+$runningScriptName = $MyInvocation.MyCommand.Name
+$Host.UI.RawUI.WindowTitle = "Cyber Audit Tool 2021 [$runningScriptName]"
+
 $CatInstallRepository = "CATInstall"
 
 # remote install command:
-#Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/contigon/$CatInstallRepository/master/go.ps1')
+#Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/contigon/CATInstall/master/go.ps1')
 
 $zipURLA = "https://raw.githubusercontent.com/contigon/$CatInstallRepository/master/go.pdf"
 $zipURLB = "https://raw.githubusercontent.com/contigon/$CatInstallRepository/master/go.pdf"
 
-$Host.UI.RawUI.WindowTitle = "Cyber Audit Tool 2021 - Installing...."
+$runningScriptName = $MyInvocation.MyCommand.Name
+$Host.UI.RawUI.WindowTitle = "Cyber Audit Tool 2021 [$runningScriptName]"
 $Host.UI.RawUI.BackgroundColor = ($bckgrnd = "Black")
 $Host.UI.RawUI.ForegroundColor = "White"
 $BufferSize = $Host.UI.RawUI.BufferSize
