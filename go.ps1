@@ -262,6 +262,7 @@ else
 }
 
 Write-Host "We will continue to the CyberAuditTool Build script" -ForegroundColor Green
+Set-ExecutionPolicy Unrestricted
 $ScriptToRun = $BasePath+"\CyberBuild.ps1"
 &$ScriptToRun
 
