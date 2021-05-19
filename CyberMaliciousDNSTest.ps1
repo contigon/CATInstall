@@ -1,4 +1,13 @@
-﻿CLS
+﻿<#
+
+Application: DNS filtering Test 
+Publisher: Omer Friedman
+Version: 0.9
+Date: 19-05-2021
+
+#>
+
+CLS
 
 $BlockedDomainsFile = "c:\temp\BlockeDomains.txt" 
 $BlockedUsingLocalDNSFile = "C:\temp\BlockedUsingLocalDNS.txt"
@@ -29,10 +38,28 @@ else
 }
 
 
-Write-Host "Checking if your primary DNS server $localDNS1 is already in our DNS filtering servers list ..."
+$filteringServices = $nameservers.keys | Sort-Object
+$help = @("
+DNS filtering Test
+------------------
+This test can help you figure out if your DNS server is protecting you from dns resolving of domains that are used in
+serving Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Fraud, Scam,Telemetry, Analytics, Tracking and more...
+
+Step 1 - Run the tests using your current configured Primary DNS server: $localDNS1
+
+Step 2 - Run the tests with different dns filtering services from the list below:
+")
+Write-Host $help
+foreach ($fService in $filteringServices)
+{
+    Write-Host "*" $fService "-->" $nameservers.$fservice 
+}
+Write-Host ""
+
+Write-Host "Checking if your primary DNS server [$localDNS1] is already in our DNS filtering servers list ..." -ForegroundColor Yellow
 If ($localDNS2)
 {
-    Write-Host "Your Secondary DNS $localDNS2 is only used when the primary DNS is not available, so it is not relevant for this test"
+    Write-Host "Your Secondary DNS [$localDNS2] is only used when the primary DNS is not available, so it is not relevant for this test" -ForegroundColor Yellow
 }
 
 
@@ -53,26 +80,7 @@ $checkSecondaryryDns = foreach ($ns2 in $nameservers.Keys) {if ($nameservers.$ns
     $nameservers.Remove($checkPrimaryDns)
  } 
 
-$filteringServices = $nameservers.keys | Sort-Object
-$help = @("
-DNS filtering Test
-------------------
-This test can help you figure out if your DNS server is protecting you from dns resolving of domains that are used in
-serving Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Fraud, Scam,Telemetry, Analytics, Tracking and more...
-
-Step 1 - Run the tests using your current configured Primary DNS server: $localDNS1
-
-Step 2 - Run the tests with different dns filtering services from the list below:
-")
-Write-Host $help
-
-foreach ($fService in $filteringServices)
-{
-    Write-Host "*" $fService "-->" $nameservers.$fservice 
-}
 Write-Host ""
-$input = Read-Host "Press Enter to continue"
-
 #download the basic blocked domains list from dbl.oisd.nl and store data in file
 Write-Host "Downloading the basic blocked domains list from dbl.oisd.nl and storing in $BlockedDomainsFile file"
 if (!(Get-ChildItem $BlockedDomainsFile -ErrorAction SilentlyContinue).Exists)
@@ -91,7 +99,11 @@ $BlockedDomains =  $BlockedDomainsFile | Sort-Object {Get-Random}
 Write-Host "The (basic) list contains $totalBlockedDomains blocked domains" -ForegroundColor Green
 Write-Host ""
 
-$input = Read-Host "Input the numbers of blocked domains to test (Max=$totalBlockedDomains)"
+$input = Read-Host "Input the numbers of blocked domains to test (Min=25 | Max=$totalBlockedDomains)"
+if ($input -lt 25) {$input = 25}
+Write-Host ""
+Write-Host "The test will done on $input randomally domains chosen from the domains list"
+
 $domains = $BlockedDomains 
 $BadDomains = $domains[0..([int]$input-1)]
 $totalChecks = $nameservers.Count * $input
@@ -150,12 +162,13 @@ foreach ($dom in $BadDomains)
     $CSVFile += $CSVrows
 }
 
-Write-Host ".\@AdvancedKeySettingsNotification.png"
-Write-Host "Total domains filtered using dns filtering services:"
-Write-Host ($TotalByNameServer | Out-String) 
 $MaxbByServer = ($TotalByNameServer.Values | Measure -Maximum).Maximum
+Write-Host "************************************************************************" -ForegroundColor Yellow 
+Write-Host "Total domains filtered using dns filtering services:" -ForegroundColor Yellow
+Write-Host ($TotalByNameServer | Out-String)  -ForegroundColor Yellow
 Write-Host "Maximum filtered domains by DNS filtering service server is: $MaxbByServer/$input" -ForegroundColor Yellow
 Write-Host "Filtered using the Currently configured Primary DNS server: $TotalBLLocalDNS/$input"  -ForegroundColor Yellow
+Write-Host "************************************************************************" -ForegroundColor Yellow 
 
 "**************Report of Local DNS settings***************" | Out-File $BlockedUsingLocalDNSFile
 "Filtered using the Currently configured Primary DNS server: $TotalBLLocalDNS/$input" | Out-File $BlockedUsingLocalDNSFile -Append
@@ -169,13 +182,14 @@ Write-Host ""
 
 if ($MaxbByServer -gt $TotalBLLocalDNS)
 {
-    Write-Host "We suggest replacing the current configured DNS settings to a DNS filtering service" -ForegroundColor Red
+    Write-Host "Note: We suggest replacing the current configured DNS settings to a DNS filtering service" -ForegroundColor red -BackgroundColor Black
 } 
 else 
 {
-    Write-Host "Your current configured DNS server is doing great, no need to change it" -ForegroundColor Green
+    Write-Host "Note: Your current configured DNS server is doing great, no need to change it" -ForegroundColor Green -BackgroundColor Black
 }
 
+Write-Host ""
 Read-Host "Press [Enter] to open report files and finish the test"
 
 Invoke-Expression $BlockedUsingLocalDNSFile
