@@ -8,7 +8,17 @@ Date: 19-05-2021
 #>
 
 CLS
+if ((Get-NetConnectionProfile).IPv4Connectivity -eq "Internet")
+{
+    Write-Host "Your computer is connected to the internet, we can continue with the tests" -ForegroundColor Green
+    $NetAdapterInterfaceIndex = (Get-NetConnectionProfile).InterfaceIndex
+}
+else {
+    Read-Host "Your computer is not connected to the internet, press [Enter] to exit" -ForegroundColor Red
+    break
+}
 
+$DNSBAKFILE = "C:\Temp\BackupDNSSettings.bak"
 $BlockedDomainsFile = "c:\temp\BlockeDomains.txt" 
 $BlockedUsingLocalDNSFile = "C:\temp\BlockedUsingLocalDNS.txt"
 $BlockedUsingDNSFiltersFile = "C:\temp\BlockedUsingDNSFilters.txt"
@@ -37,17 +47,43 @@ else
     $localDNS2 = ""
 }
 
+if (Test-Path -Path $DNSBAKFILE -PathType Leaf)
+{
+    Write-Host "Your original DNS ip adresses are already saved in $DNSBAKFILE" -ForegroundColor Green
+    $origIP = Get-Content $DNSBAKFILE
+    if ($origIP[0] -ne $localDNS1)
+    {
+        Write-Host "Note: Your Current DNS settings [$localDNS1] is different than the original settings [$origIP]" -ForegroundColor Red
+        $input = read-host "Press [R] to restore original DNS settings or [Enter] to continue with current DNS"
+        if ($input -eq "R")
+        {
+            Set-DnsClientServerAddress -InterfaceIndex $NetAdapterInterfaceIndex -ServerAddresses $origIP[0],$origIP[1]    
+            $localDNS1 = $origIP[0]
+            $localDNS2 = $origIP[1]
+        }
+    }
+}
+else
+{
+    Write-Host "Backing up your DNS settings to $DNSBAKFILE" -ForegroundColor Yellow
+    $localRegisteredDNS | Out-File $DNSBAKFILE #backing up dns settings if needed to be restored later
+}
 
 $filteringServices = $nameservers.keys | Sort-Object
 $help = @("
+
 DNS filtering Test
 ------------------
-This test can help you figure out if your DNS server is protecting you from dns resolving of domains that are used in
-serving Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Fraud, Scam,Telemetry, Analytics, Tracking and more...
+
+This test can help you figure out if your DNS server is protecting you from dns resolving of dangerous domains 
+that are used in serving Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Fraud, 
+Scam,Telemetry, Analytics, Tracking and more...
 
 Step 1 - Run the tests using your current configured Primary DNS server: $localDNS1
+Step 2 - Run the tests with different dns filtering services
+Step 3 - Help you change DNS settings to a filtering service from
 
-Step 2 - Run the tests with different dns filtering services from the list below:
+List of Filtering services:
 ")
 Write-Host $help
 foreach ($fService in $filteringServices)
@@ -55,13 +91,6 @@ foreach ($fService in $filteringServices)
     Write-Host "*" $fService "-->" $nameservers.$fservice 
 }
 Write-Host ""
-
-Write-Host "Checking if your primary DNS server [$localDNS1] is already in our DNS filtering servers list ..." -ForegroundColor Yellow
-If ($localDNS2)
-{
-    Write-Host "Your Secondary DNS [$localDNS2] is only used when the primary DNS is not available, so it is not relevant for this test" -ForegroundColor Yellow
-}
-
 
 $checkPrimaryDns = foreach ($ns1 in $nameservers.Keys) {if ($nameservers.$ns1.Equals($localDNS1)){$ns1}}
 $checkSecondaryryDns = foreach ($ns2 in $nameservers.Keys) {if ($nameservers.$ns2.Equals($localDNS2)){$ns2}}
@@ -78,19 +107,25 @@ $checkSecondaryryDns = foreach ($ns2 in $nameservers.Keys) {if ($nameservers.$ns
     Write-Host "Your Primary DNS server $localDNS1 is pointing to --> "$checkPrimaryDns -ForegroundColor Green
     Write-Host "Note: You dont have a Secondary DNS Server" -ForegroundColor Red
     $nameservers.Remove($checkPrimaryDns)
+    $TotalByNameServer.Remove($checkPrimaryDns)
  } 
 
 Write-Host ""
 #download the basic blocked domains list from dbl.oisd.nl and store data in file
-Write-Host "Downloading the basic blocked domains list from dbl.oisd.nl and storing in $BlockedDomainsFile file"
-if (!(Get-ChildItem $BlockedDomainsFile -ErrorAction SilentlyContinue).Exists)
+if (Test-Path -Path $BlockedDomainsFile -PathType Leaf)
 {
+    Write-Host "You already downloaded before the blocked domain list $BlockedDomainsFile" -ForegroundColor Green
+}
+else
+{
+    Write-Host "Downloading the basic blocked domains list from dbl.oisd.nl and storing in $BlockedDomainsFile file" -ForegroundColor Yellow
     $getBlockedDomains = Invoke-WebRequest -Uri "https://dbl.oisd.nl/basic/"
     $BlockedDomains = $getBlockedDomains.Content
     Set-Content $BlockedDomainsFile -Value $BlockedDomains -Force
 }
 
 #read the data from file and create it as a randomized array
+Write-Host "Parsing the blocked domain list file and creating a randomized list of domains to check" -ForegroundColor Yellow
 $BlockedDomainsFile = [System.IO.File]::ReadALLLines($BlockedDomainsFile)
 $totalBlockedDomains = $BlockedDomainsFile.Count - 15 #13 lines banner and 2 lines at the end of file
 $banner = $BlockedDomainsFile[0..12]
@@ -99,8 +134,16 @@ $BlockedDomains =  $BlockedDomainsFile | Sort-Object {Get-Random}
 Write-Host "The (basic) list contains $totalBlockedDomains blocked domains" -ForegroundColor Green
 Write-Host ""
 
-$input = Read-Host "Input the numbers of blocked domains to test (Min=25 | Max=$totalBlockedDomains)"
-if ($input -lt 25) {$input = 25}
+
+do {
+  $inputString = read-host "Input the numbers of blocked domains to test (Min=25 | Max=$totalBlockedDomains)"
+  $input = $inputString -as [Double]
+  $ok = $input -ne $NULL
+  if (-not $ok) { write-host "You must enter a numeric value, Please try again" -ForegroundColor Red}
+}
+until ($ok)
+
+if ($input -lt 25) {$input = 10}
 Write-Host ""
 Write-Host "The test will done on $input randomally domains chosen from the domains list"
 
@@ -175,6 +218,7 @@ Write-Host "********************************************************************
 $CSVnoLocalDNSFile | FT | Out-File $BlockedUsingLocalDNSFile -Append
 
 "**************Report of Filtering DNS services**********" | Out-File $BlockedUsingDNSFiltersFile
+($TotalByNameServer | Out-String) | Out-File $BlockedUsingDNSFiltersFile -Append
 "Maximum filtered domains by DNS filtering service server is: $MaxbByServer/$input" |  Out-File $BlockedUsingDNSFiltersFile -Append
 $CSVFile | FT | Out-File $BlockedUsingDNSFiltersFile -Append
 
@@ -182,17 +226,108 @@ Write-Host ""
 
 if ($MaxbByServer -gt $TotalBLLocalDNS)
 {
-    Write-Host "Note: We suggest replacing the current configured DNS settings to a DNS filtering service" -ForegroundColor red -BackgroundColor Black
+    #find the best DNS filetring service
+    $bestDNS = foreach ($t in $TotalByNameServer.Keys) {if ($TotalByNameServer.$t -eq $MaxbByServer) {$t}}
+     if ($bestDNS.Count -eq 1)
+    {
+        $recommend = $bestDNS
+    }
+    else
+    {
+        foreach ($d in $bestDNS)
+        {
+            $recommend = $bestDNS[0]
+        }
+    }
+
+    Write-Host "Note: We recommend changing the current configured DNS to a more protective DNS filtering service [$recommend]" -ForegroundColor red -BackgroundColor Black
+    Write-Host ""
+    #if connected to domain we dont change DNS settings in local machine but in the local DNS server
+    $menuNumber = 1 #for enumerating the nameservers menu
+    if  ($env:USERDOMAIN -eq $env:COMPUTERNAME)
+    {
+        Write-Host "Please select option number to change your primary DNS settings:"
+        Write-Host "---------------------------------------------------------------"
+        foreach ($ns in $nameservers.Keys)
+        {
+            if ($ns -eq $recommend)
+            {
+                Write-Host "[$menuNumber] $ns =" $nameservers.$ns "(Recommended)" -ForegroundColor Green
+            }
+            else
+            {
+                Write-Host "[$menuNumber] $ns =" $nameservers.$ns
+            }
+            $menuNumber++
+        }
+        Write-Host ""
+        $menu = Read-Host "Input your selection or [Enter] to continue without changing"
+
+        #create list of dns filters ip addresses
+        $ip = @()
+        foreach ($ns in $nameservers.Values)
+            {
+                $ip += $ns
+            }
+    
+        #create menu
+        switch ($menu)
+        {
+            1 {
+                Write-Host "Setting DNS ip to:" $ip[0]
+                Set-DnsClientServerAddress -InterfaceIndex $NetAdapterInterfaceIndex -ServerAddresses $ip[0]
+                }
+            2 {
+                Write-Host "Setting DNS ip to:" $ip[1]
+                Set-DnsClientServerAddress -InterfaceIndex $NetAdapterInterfaceIndex -ServerAddresses $ip[1]
+                }
+
+            3 {
+                Write-Host "Setting DNS ip to:" $ip[2]
+                Set-DnsClientServerAddress -InterfaceIndex $NetAdapterInterfaceIndex -ServerAddresses $ip[2]
+                }
+
+            4 {
+                Write-Host "Setting DNS ip to:" $ip[3]
+                Set-DnsClientServerAddress -InterfaceIndex $NetAdapterInterfaceIndex -ServerAddresses $ip[3]
+                }
+            5 {
+                Write-Host "Setting DNS ip to:" $ip[4]
+                Set-DnsClientServerAddress -InterfaceIndex $NetAdapterInterfaceIndex -ServerAddresses $ip[4]
+                }
+        }
+    }
+    else
+    {
+        Write-Host "Note: Because you are connected to a DOMAIN please dont change settings locally, the changes should be done"
+        Write-Host "in the local dns server [$localDNS1] so it resolves external addresses from any of the filtering services"
+    }
+
+    if ($menu -ne $NULL)
+    {
+        Write-Host "Trying to ping google.com in order to check that the changing is working..." -ForegroundColor Yellow -BackgroundColor Black
+        if ((Test-NetConnection -ComputerName 'google.com').pingsucceeded)
+        {
+            Write-Host "DNS resolving is working after the change, this is great" -ForegroundColor Green
+        }
+        else
+        {
+            $input = Read-Host "press [R] to restore original DNS settings or [Enter] to leave the changes"
+            if ($input -eq "R")
+            {
+                $origIP = Get-Content $DNSBAKFILE
+                Set-DnsClientServerAddress -InterfaceIndex $NetAdapterInterfaceIndex -ServerAddresses $origIP[0],$origIP[1]    
+            }
+        }
+    }
 } 
 else 
 {
-    Write-Host "Note: Your current configured DNS server is doing great, no need to change it" -ForegroundColor Green -BackgroundColor Black
+    Write-Host "Note: Your current configured DNS server [$localDNS1] is doing great, no need to change it" -ForegroundColor Green -BackgroundColor Black
 }
 
 Write-Host ""
-Read-Host "Press [Enter] to open report files and finish the test"
 
+Read-Host "Press [Enter] to open report files and finish the test"
 Invoke-Expression $BlockedUsingLocalDNSFile
 Invoke-Expression $BlockedUsingDNSFiltersFile
-
-
