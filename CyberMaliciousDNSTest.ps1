@@ -2,8 +2,8 @@
 
 Application: DNS filtering Test 
 Publisher: Omer Friedman
-Version: 0.9
-Date: 19-05-2021
+Version: 1.0
+Date: 25-05-2021
 
 #>
 
@@ -143,7 +143,7 @@ do {
 }
 until ($ok)
 
-if ($input -lt 25) {$input = 10}
+if ($input -lt 25) {$input = 25}
 Write-Host ""
 Write-Host "The test will done on $input randomally domains chosen from the domains list"
 
@@ -261,7 +261,15 @@ if ($MaxbByServer -gt $TotalBLLocalDNS)
             $menuNumber++
         }
         Write-Host ""
-        $menu = Read-Host "Input your selection or [Enter] to continue without changing"
+        do
+        {
+            $menu = Read-Host "Input your selection or [Enter] to continue without changing"
+            if ($menu -cnotin 1..5)
+            {
+                Write-Host "Please input number between 1 to 5" -ForegroundColor Red
+            }
+        }
+        while ($menu -cnotin 1..5)
 
         #create list of dns filters ip addresses
         $ip = @()
