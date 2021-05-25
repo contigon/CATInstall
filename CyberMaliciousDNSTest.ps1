@@ -29,8 +29,8 @@ Remove-Item -Path $BlockedUsingDNSFiltersFile -Force -ErrorAction SilentlyContin
 #$TotalByNameServer = @{Cloudflare=0;CloudflareMalware=0;CloudflareMalwareAndPorn=0;Quad9=0;OpenDNS=0;AdGuard=0;AdGuardFamily=0}
 #$nameservers = @{Cloudflare='1.1.1.1';CloudflareMalware='1.1.1.2';CloudflareMalwareAndPorn='1.1.1.3';Quad9='9.9.9.9';OpenDNS='208.67.222.222';AdGuard='94.140.14.14';AdGuardFamily='94.140.14.15'}
 
-$TotalByNameServer = @{Cloudflare=0;CloudflareMalware=0;CloudflareMalwareAndPorn=0;Quad9=0;OpenDNS=0}
-$nameservers = @{Cloudflare='1.1.1.1';CloudflareMalware='1.1.1.2';CloudflareMalwareAndPorn='1.1.1.3';Quad9='9.9.9.9';OpenDNS='208.67.222.222'}
+$TotalByNameServer = @{OpenDNSFamily=0;AdGuard=0;CloudflareMalwareAndPorn=0;Quad9=0;Comodo=0}
+$nameservers = @{OpenDNSFamily='208.67.222.222';AdGuard='94.140.14.14';CloudflareMalwareAndPorn='1.1.1.3';Quad9='9.9.9.9';Comodo ='8.26.56.26'}
 
 $TotalBLWithFilter = 0
 $TotalBLLocalDNS = 0
@@ -79,11 +79,13 @@ This test can help you figure out if your DNS server is protecting you from dns 
 that are used in serving Ads, Phishing, Malvertising, Malware, Spyware, Ransomware, CryptoJacking, Fraud, 
 Scam,Telemetry, Analytics, Tracking and more...
 
+For more information about free and publid DNS server go to: https://www.geckoandfly.com/27285/free-public-dns-servers/
+
 Step 1 - Run the tests using your current configured Primary DNS server: $localDNS1
 Step 2 - Run the tests with different dns filtering services
 Step 3 - Help you change DNS settings to a filtering service from
 
-List of Filtering services:
+Below is the List of DNS filtering services that we will use in our tests:
 ")
 Write-Host $help
 foreach ($fService in $filteringServices)
