@@ -250,6 +250,7 @@ if ($MaxbByServer -gt $TotalBLLocalDNS)
     {
         Write-Host "Please select option number to change your primary DNS settings:"
         Write-Host "---------------------------------------------------------------"
+        Write-Host "[0] Leave your current settings = $localDNS1 $localDNS2"
         foreach ($ns in $nameservers.Keys)
         {
             if ($ns -eq $recommend)
@@ -265,13 +266,13 @@ if ($MaxbByServer -gt $TotalBLLocalDNS)
         Write-Host ""
         do
         {
-            $menu = Read-Host "Input your selection or [Enter] to continue without changing"
-            if ($menu -cnotin 1..5)
+            $menu = Read-Host "Input your selection"
+            if ($menu -cnotin 0..5)
             {
                 Write-Host "Please input number between 1 to 5" -ForegroundColor Red
             }
         }
-        while ($menu -cnotin 1..5)
+        while ($menu -cnotin 0..5)
 
         #create list of dns filters ip addresses
         $ip = @()
@@ -313,7 +314,7 @@ if ($MaxbByServer -gt $TotalBLLocalDNS)
         Write-Host "in the local dns server [$localDNS1] so it resolves external addresses from any of the filtering services"
     }
 
-    if ($menu -ne $NULL)
+    if ($menu -ne "0")
     {
         Write-Host "Trying to ping google.com in order to check that the changing is working..." -ForegroundColor Yellow -BackgroundColor Black
         if ((Test-NetConnection -ComputerName 'google.com').pingsucceeded)
