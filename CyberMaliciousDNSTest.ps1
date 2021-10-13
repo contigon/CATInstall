@@ -23,7 +23,7 @@ else {
     break
 }
 
-$DNSBAKFILE = $PSScriptRoot\BackupDNSSettings.bak"
+$DNSBAKFILE = "$PSScriptRoot\BackupDNSSettings.bak"
 $BlockedDomainsFile = "$PSScriptRoot\BlockeDomains.txt" 
 $BlockedUsingLocalDNSFile = "$PSScriptRoot\BlockedUsingLocalDNS.txt"
 $BlockedUsingDNSFiltersFile = "$PSScriptRoot\BlockedUsingDNSFilters.txt"
