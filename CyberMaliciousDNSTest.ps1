@@ -7,6 +7,11 @@ Date: 25-05-2021
 
 #>
 
+#How to use Invoke-WebRequest in PowerShell without having to first open Internet Explorer
+$keyPath = 'Registry::HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Internet Explorer\Main'
+if (!(Test-Path $keyPath)) { New-Item $keyPath -Force | Out-Null }
+Set-ItemProperty -Path $keyPath -Name "DisableFirstRunCustomize" -Value 1
+
 CLS
 if ((Get-NetConnectionProfile).IPv4Connectivity -eq "Internet")
 {
@@ -18,10 +23,10 @@ else {
     break
 }
 
-$DNSBAKFILE = "C:\Temp\BackupDNSSettings.bak"
-$BlockedDomainsFile = "c:\temp\BlockeDomains.txt" 
-$BlockedUsingLocalDNSFile = "C:\temp\BlockedUsingLocalDNS.txt"
-$BlockedUsingDNSFiltersFile = "C:\temp\BlockedUsingDNSFilters.txt"
+$DNSBAKFILE = $PSScriptRoot\BackupDNSSettings.bak"
+$BlockedDomainsFile = "$PSScriptRoot\BlockeDomains.txt" 
+$BlockedUsingLocalDNSFile = "$PSScriptRoot\BlockedUsingLocalDNS.txt"
+$BlockedUsingDNSFiltersFile = "$PSScriptRoot\BlockedUsingDNSFilters.txt"
 
 Remove-Item -Path $BlockedUsingLocalDNSFile -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $BlockedUsingDNSFiltersFile -Force -ErrorAction SilentlyContinue
